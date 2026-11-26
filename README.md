@@ -22,6 +22,7 @@ This is a separate application for the Winthrop Microsoft Forms SOR destination.
   - Intervention matrix (Action Taken / Feedback Given / Manager Informed)
   - Details of intervention
   - Type of Observation
+- Randomly preselects Anonymous, anonymous or Anon when the page opens; the selected format is visible, editable, and used consistently throughout the batch.
 - Defaults each observation location to External.
 - Pre-fills Details of intervention with a varied N/A entry; the user can replace it with actual intervention details.
 - Uses one batch-level confirmation checkbox after all records have been reviewed.

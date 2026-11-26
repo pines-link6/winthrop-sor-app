@@ -32,7 +32,7 @@ button.secondary{background:#374151}button.light{background:#e5e7eb;color:#11182
 <h2>Batch size and common details</h2>
 <div class="grid">
 <div><label for="count">Number of observations</label><select id="count"><option value="random" selected>Random (10–40)</option><option value="1">1 (single-record test)</option>{% for n in range(min_batch, max_batch + 1) %}<option value="{{n}}">{{n}}</option>{% endfor %}</select><p class="small">Choose the number of separate SORs to prepare. Random selects a quantity, not fabricated observation content.</p></div>
-<div><label for="name">Your name (used for all reports)</label><input id="name" value="Anonymous"></div>
+<div><label for="name">Your name (used for all reports)</label><select id="name"><option value="Anonymous">Anonymous</option><option value="anonymous">anonymous</option><option value="Anon">Anon</option></select><p class="small">Choose the anonymous display format for this batch.</p></div>
 <div><label for="company">Company</label><select id="company">{% for c in companies %}<option value="{{c}}" {% if c == "CSK" %}selected{% endif %}>{{c}}</option>{% endfor %}</select></div>
 <div><label for="date">Date</label><input id="date" type="date" value="{{today}}"></div>
 </div>
@@ -123,6 +123,8 @@ function nextPhrase(){
 const naOptions=['N/A','NA','na','n/a','N.A.','Not applicable','not applicable'];
 function randomNA(){return naOptions[Math.floor(Math.random()*naOptions.length)];}
 const $ = id => document.getElementById(id);
+const anonymousNameOptions = ['Anonymous','anonymous','Anon'];
+$('name').value = anonymousNameOptions[Math.floor(Math.random()*anonymousNameOptions.length)];
 let batch = [], pollTimer = null;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
