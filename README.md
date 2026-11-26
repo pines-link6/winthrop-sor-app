@@ -1,26 +1,47 @@
-# Winthrop Don't Walk By – SOR preparation app
+# Winthrop Don't Walk By – Microsoft Forms SOR Batch App
+
+This is a separate application for the Winthrop Microsoft Forms SOR destination.
 
 ## Files
-- `app.py`
-- `templates/index.html`
+- `app.py` – Flask app and Playwright Microsoft Forms automation
+- `templates/index.html` – batch preparation/review UI
 - `requirements.txt`
 - `Dockerfile`
 
-## GitHub repository
-Create a separate repository named `winthrop-sor-app`. Do not upload these files to `csk-sor-iphone`.
+## What it does
+- Lets the user prepare 10–40 separate observation records, with a separate one-record test option for initial verification.
+- Uses the Microsoft Forms fields recorded from the supplied form screenshots:
+  - Your name
+  - Company
+  - Date
+  - Location
+  - Nature of Observation Positive or Negative
+  - Nature of Observation
+  - Observation Description
+  - Intervention matrix (Action Taken / Feedback Given / Manager Informed)
+  - Details of intervention
+  - Type of Observation
+- Requires each record to be individually marked as witnessed/verified and reviewed.
+- Submits records sequentially to the official Microsoft Form.
+- Counts a submission only when a Microsoft Forms confirmation message is visible.
+- Stops on an uncertain result rather than blindly retrying and potentially duplicating an SOR.
 
-Upload the project structure exactly as shown above. `index.html` must be inside the `templates` folder.
+**The app does not create or invent factual observations.** The user must enter a genuine event for each report. Do not submit generic example text as if it were an event that occurred.
 
-## Render
-Create a new Web Service connected to `winthrop-sor-app`.
-- Runtime: Docker
-- Branch: main
-- Auto-Deploy: On Commit
-- Environment variable: `WINTHROP_FORM_URL` = `https://forms.cloud.microsoft/pages/responsepage.aspx?id=dUaehQ5Ly0ucFIpVl4wrX-Kdix2lwfZItDDsyeebhi1UNlFRM1ZUTU9ZSEFLNURCRlhaNDhBRzQwMy4u&route=shorturl`
+## GitHub / Render deployment
+1. Use the separate GitHub repository `winthrop-sor-app`.
+2. Replace the repository files with this package, keeping `index.html` inside `templates/`.
+3. In Render, use the existing Winthrop Web Service connected to this repository.
+4. Runtime: Docker. Branch: `main`. Auto-Deploy: On Commit.
+5. Ensure this environment variable exists:
+   `WINTHROP_FORM_URL=https://forms.cloud.microsoft/pages/responsepage.aspx?id=dUaehQ5Ly0ucFIpVl4wrX-Kdix2lwfZItDDsyeebhi1UNlFRM1ZUTU9ZSEFLNURCRlhaNDhBRzQwMy4u&route=shorturl`
+6. Deploy and check `/health`.
 
-No additional Start Command is required; the Dockerfile starts Gunicorn.
+## Important first test
+The Microsoft Forms page is rendered dynamically and its internal markup can change. The automation is based on the saved screenshots and accessible question labels, but it must be tested with ONE genuine observation first. Verify that the entry appears in the form owner's response results before running a larger batch. If the app stops on a field locator or confirmation check, send the exact status/error text and we can adjust the selectors. Do not run a large batch until the one-record test has been confirmed.
 
-## Usage
-Open the Render URL, enter each real observation, add it to the batch, and tick both verification boxes for every record. Export CSV for review/audit, then use Open Microsoft Forms to enter the verified information into the official form.
-
-This version deliberately does not auto-submit fabricated positive observations. The old 200-example file is not wired into submissions; examples are prompts only and must never be treated as evidence that an event occurred.
+## Security / operation
+- Keep the Render service private to intended users; anyone with the app URL may otherwise be able to submit reports.
+- Use a strong `SECRET_KEY` environment variable.
+- The in-memory job status is not persistent; a Render restart clears current progress.
+- Browser automation runs on the Render server, not in the user's browser.
