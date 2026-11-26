@@ -61,6 +61,65 @@ button.secondary{background:#374151}button.light{background:#e5e7eb;color:#11182
 <script>
 const companies = {{companies|tojson}}, locations = {{locations|tojson}}, natures = {{natures|tojson}},
 furtherNatures = {{further_natures|tojson}}, observationTypes = {{observation_types|tojson}};
+
+// 225 short positive observation prompts: 180 English + 45 Romanian.
+// These are prompts only and must be checked against a real site observation.
+const housekeepingItems = [
+ "walkways and access routes","materials in the work area","loose packaging and offcuts",
+ "tools and equipment after use","cables and leads around the workface",
+ "the area around the lifting zone","work platforms and access points",
+ "PPE and safety equipment","exclusion zones around lifting operations",
+ "safe access equipment and platforms","lifting accessories before use",
+ "hand placement and keeping clear of pinch points","waste and scrap materials",
+ "materials stored near the workface","emergency access and fire points",
+ "the floor around the installation area","the shared work area between trades"
+];
+const englishPatterns = [
+ "Good housekeeping maintained around {x}",
+ "The team kept {x} clear and tidy",
+ "Nice to see {x} kept under control",
+ "Work area left clean with {x} properly managed",
+ "Operatives made sure {x} was not causing an obstruction",
+ "Good effort from the lads keeping {x} tidy",
+ "Safe access maintained by keeping {x} clear",
+ "The area was checked and {x} put in order",
+ "Good standard of housekeeping with {x}",
+ "Team took time to sort out {x} before moving on",
+ "No issues with access as {x} was kept clear",
+ "Materials and equipment were managed well around {x}",
+ "Good example of everyone looking after {x}",
+ "The workface stayed organised and {x} was kept tidy",
+ "Operatives were putting things away and keeping {x} clear"
+];
+const romanianItems = [
+ "caile de acces","materialele din zona de lucru","ambalajele si resturile",
+ "sculele dupa terminarea lucrarii","cablurile de pe jos","zona de ridicare",
+ "platformele de lucru","deseurile si materialele ramase","zona din jurul echipei",
+ "iesirile de urgenta","zona de montaj","materialele depozitate",
+ "echipamentul individual de protectie","zona de excludere pentru ridicare",
+ "echipamentele de acces si platformele","accesoriile de ridicare","pozitia mainilor si zonele de prindere"
+];
+const romanianPatterns = [
+ "Zona de lucru a fost mentinuta curata si ordonata in zona {x}",
+ "Baietii au avut grija sa pastreze {x} libere si curate",
+ "Buna organizare si atentie la {x} pe parcursul lucrarii",
+ "S-a facut curatenie si {x} au ramas in ordine"
+];
+const phraseBank = [
+ ...englishPatterns.flatMap(p=>housekeepingItems.slice(0,12).map(x=>p.replace("{x}",x))),
+ ...romanianPatterns.flatMap(p=>[...romanianItems.slice(0,6), ...romanianItems.slice(11,16)].map(x=>p.replace("{x}",x))),
+ "Echipa a pastrat zona curata si accesul liber pe tot parcursul lucrarii"
+];
+function shuffledPhrases(){
+ const a=[...phraseBank];
+ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+ return a;
+}
+let phraseDeck=shuffledPhrases(), phraseIndex=0;
+function nextPhrase(){
+ if(phraseIndex>=phraseDeck.length){phraseDeck=shuffledPhrases();phraseIndex=0;}
+ return phraseDeck[phraseIndex++];
+}
 const $ = id => document.getElementById(id);
 let batch = [], pollTimer = null;
 
@@ -72,7 +131,7 @@ function createForms(){
  const old = readAll();
  batch = Array.from({length:count},(_,i)=>old[i]||({
   location:'',nature:'Positive Observation',further_nature:'Positive Observation',
-  description:'',action_taken:'No',feedback_given:'No',manager_informed:'No',
+  description:nextPhrase(),action_taken:'No',feedback_given:'No',manager_informed:'No',
   intervention_details:'',type:observationTypes[2],witnessed:false,reviewed:false
  }));
  render();
@@ -97,7 +156,7 @@ function render(){
   <div><label>Nature of Observation – Positive or Negative</label><select name="nature">${options(natures,r.nature)}</select></div>
   <div><label>Nature of Observation</label><select name="further_nature">${options(furtherNatures,r.further_nature)}</select></div>
   <div><label>Type of Observation</label><select name="type">${options(observationTypes,r.type)}</select></div>
-  <div class="wide"><label>Observation Description</label><textarea name="description" placeholder="Describe the actual event, what was observed and the relevant task or condition.">${esc(r.description)}</textarea></div>
+  <div class="wide"><div class="row" style="justify-content:space-between"><label>Observation Description</label><button type="button" class="light" data-new-phrase="${i}">New random phrase</button></div><textarea name="description" placeholder="Check and edit this prompt so it accurately describes what happened on site.">${esc(r.description)}</textarea><p class="small">Random prompt — only keep it if it matches a real observation</p></div>
   <div><label>Action Taken</label><select name="action_taken">${options(['Yes','No'],r.action_taken)}</select></div>
   <div><label>Feedback Given</label><select name="feedback_given">${options(['Yes','No'],r.feedback_given)}</select></div>
   <div><label>Manager Informed</label><select name="manager_informed">${options(['Yes','No'],r.manager_informed)}</select></div>
@@ -154,5 +213,10 @@ async function poll(id){
  }catch(e){$('status').textContent=e.message;$('submit').disabled=false;}
 }
 $('build').onclick=createForms;$('submit').onclick=submitBatch;
+$('records').addEventListener('click',e=>{
+ const b=e.target.closest('[data-new-phrase]');if(!b)return;
+ const card=b.closest('.record');const field=card?.querySelector('[name="description"]');
+ if(field)field.value=nextPhrase();
+});
 $('count').addEventListener('change',()=>{if(batch.length&&!confirm('Changing the batch size will rebuild the observation forms. Continue?'))return;});
 </script></body></html>

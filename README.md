@@ -10,6 +10,7 @@ This is a separate application for the Winthrop Microsoft Forms SOR destination.
 
 ## What it does
 - Lets the user prepare 10–40 separate observation records, with a separate one-record test option for initial verification.
+- Randomly pre-fills each description from a 225-phrase positive prompt bank covering housekeeping, PPE, access, lifting and safe working (English and Romanian), with a per-record regenerate button.
 - Uses the Microsoft Forms fields recorded from the supplied form screenshots:
   - Your name
   - Company
@@ -26,7 +27,7 @@ This is a separate application for the Winthrop Microsoft Forms SOR destination.
 - Counts a submission only when a Microsoft Forms confirmation message is visible.
 - Stops on an uncertain result rather than blindly retrying and potentially duplicating an SOR.
 
-**The app does not create or invent factual observations.** The user must enter a genuine event for each report. Do not submit generic example text as if it were an event that occurred.
+**The app supplies randomly selected positive wording prompts, but these are not evidence of events.** The user must verify, edit and submit only descriptions that match genuine events personally witnessed or independently verified. Do not submit generic example text as if it were an event that occurred.
 
 ## GitHub / Render deployment
 1. Use the separate GitHub repository `winthrop-sor-app`.

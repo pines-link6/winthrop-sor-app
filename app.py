@@ -60,16 +60,73 @@ def fill_text_question(page, title, value, date_field=False):
 
 def choose_radio(page, question_title, option):
     q = get_question(page, question_title)
-    # Prefer the accessible radio name; this avoids depending on generated IDs.
-    radio = q.get_by_role("radio", name=option, exact=True)
-    if radio.count():
-        radio.first.check(force=True)
+    # Forms' custom radio controls can report a successful click without
+    # changing their checked state. Match labels with whitespace tolerance,
+    # try the accessible label first, and verify the actual input state.
+    radios = q.get_by_role("radio")
+    target = None
+    for i in range(radios.count()):
+        radio = radios.nth(i)
+        aria = (radio.get_attribute("aria-label") or "").strip()
+        value = (radio.get_attribute("value") or "").strip()
+        labelledby = (radio.get_attribute("aria-labelledby") or "").strip()
+        label_text = ""
+        if labelledby:
+            label = page.locator("#" + labelledby.replace(" ", ", #"))
+            if label.count():
+                label_text = " ".join(label.all_text_contents()).strip()
+        if option.strip() in (aria, value, label_text):
+            target = radio
+            break
+
+    if target is None:
+        # Fallback to Playwright's accessible-name matching.
+        target = q.get_by_role("radio", name=re.compile(r"^" + re.escape(option.strip()) + r"\\s*$", re.I)).first
+        if target.count() == 0:
+            raise RuntimeError(f"Could not find radio option '{option}' for question: {question_title}")
+
+    def selected():
+        try:
+            if target.is_checked():
+                return True
+        except Exception:
+            pass
+        return (target.get_attribute("aria-checked") or "").lower() == "true"
+
+    if selected():
         return
-    label = q.get_by_text(option, exact=True)
-    if label.count():
-        label.first.click()
+
+    # Try normal click, then the associated option text, then a native DOM click.
+    try:
+        target.click(timeout=4000)
+    except Exception:
+        pass
+    page.wait_for_timeout(250)
+    if selected():
         return
-    raise RuntimeError(f"Could not select '{option}' for question: {question_title}")
+
+    try:
+        target.focus()
+        target.press("Space")
+    except Exception:
+        pass
+    page.wait_for_timeout(250)
+    if selected():
+        return
+
+    try:
+        target.evaluate("(el) => el.click()")
+    except Exception:
+        pass
+    page.wait_for_timeout(400)
+    if selected():
+        return
+
+    value = (target.get_attribute("value") or "").strip()
+    raise RuntimeError(
+        f"Microsoft Forms did not select '{option}' for '{question_title}' "
+        f"(matched option value '{value}'). The option was found but remained unchecked."
+    )
 
 def choose_company(page, company):
     q = get_question(page, "Company")
