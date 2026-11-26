@@ -48,7 +48,7 @@ button.secondary{background:#374151}button.light{background:#e5e7eb;color:#11182
 <section class="card">
 <h2>Review and submit</h2>
 <p>Before submission, check every record against what actually happened on site. Both confirmations are required for every observation.</p>
-<label class="confirm"><input type="checkbox" id="batchConfirm"><span>I have checked all entries and confirm that every report describes a genuine event, is accurate, and is appropriate to submit.</span></label>
+<label class="confirm"><input type="checkbox" id="batchConfirm"><span>I have checked every observation in this batch and confirm that each description is accurate, reflects a genuine event I witnessed or verified, and is appropriate to submit.</span></label>
 <div class="actions"><button id="submit" disabled>Submit verified batch to Winthrop</button></div>
 <div id="progressArea" class="hidden">
   <div class="row" style="justify-content:space-between;margin:12px 0"><b id="progressText">Starting…</b><span id="progressCount">0 / 0</span></div>
@@ -120,6 +120,8 @@ function nextPhrase(){
  if(phraseIndex>=phraseDeck.length){phraseDeck=shuffledPhrases();phraseIndex=0;}
  return phraseDeck[phraseIndex++];
 }
+const naOptions=['N/A','NA','na','n/a','N.A.','Not applicable','not applicable'];
+function randomNA(){return naOptions[Math.floor(Math.random()*naOptions.length)];}
 const $ = id => document.getElementById(id);
 let batch = [], pollTimer = null;
 
@@ -130,20 +132,19 @@ function createForms(){
  const count = $('count').value==='random'?randomCount():Number($('count').value);
  const old = readAll();
  batch = Array.from({length:count},(_,i)=>old[i]||({
-  location:'',nature:'Positive Observation',further_nature:'Positive Observation',
+  location:'External',nature:'Positive Observation',further_nature:'Positive Observation',
   description:nextPhrase(),action_taken:'No',feedback_given:'No',manager_informed:'No',
-  intervention_details:'',type:observationTypes[2],witnessed:false,reviewed:false
+  intervention_details:randomNA(),type:observationTypes[2],witnessed:false,reviewed:false
  }));
  render();
 }
 function readAll(){
  return [...document.querySelectorAll('.record')].map(card=>{
   const val=n=>card.querySelector(`[name="${n}"]`)?.value||'';
-  const chk=n=>!!card.querySelector(`[name="${n}"]`)?.checked;
   return {location:val('location'),nature:val('nature'),further_nature:val('further_nature'),
    description:val('description'),action_taken:val('action_taken'),feedback_given:val('feedback_given'),
    manager_informed:val('manager_informed'),intervention_details:val('intervention_details'),
-   type:val('type'),witnessed:chk('witnessed'),reviewed:chk('reviewed')};
+   type:val('type')};
  });
 }
 function render(){
@@ -160,10 +161,9 @@ function render(){
   <div><label>Action Taken</label><select name="action_taken">${options(['Yes','No'],r.action_taken)}</select></div>
   <div><label>Feedback Given</label><select name="feedback_given">${options(['Yes','No'],r.feedback_given)}</select></div>
   <div><label>Manager Informed</label><select name="manager_informed">${options(['Yes','No'],r.manager_informed)}</select></div>
-  <div class="wide"><label>Details of intervention</label><textarea name="intervention_details" placeholder="If an intervention occurred, describe what was done. If none, enter N/A.">${esc(r.intervention_details)}</textarea></div>
+  <div class="wide"><label>Details of intervention</label><textarea name="intervention_details" placeholder="Describe the intervention, or use N/A if none.">${esc(r.intervention_details||randomNA())}</textarea></div>
   </div>
-  <label class="confirm"><input type="checkbox" name="witnessed" ${r.witnessed?'checked':''}><span>I personally witnessed this event or have verified that it occurred.</span></label>
-  <label class="confirm"><input type="checkbox" name="reviewed" ${r.reviewed?'checked':''}><span>I have reviewed this report and confirm it is accurate.</span></label>`;
+`;
   host.appendChild(d);
  });
  $('batchConfirm').checked=false;
@@ -173,11 +173,10 @@ function collect(){
  const common={name:$('name').value.trim(),company:$('company').value,date:$('date').value};
  return [...document.querySelectorAll('.record')].map(card=>{
   const val=n=>card.querySelector(`[name="${n}"]`)?.value.trim()||'';
-  const chk=n=>!!card.querySelector(`[name="${n}"]`)?.checked;
   return {...common,location:val('location'),nature:val('nature'),further_nature:val('further_nature'),
    description:val('description'),action_taken:val('action_taken'),feedback_given:val('feedback_given'),
    manager_informed:val('manager_informed'),intervention_details:val('intervention_details'),
-   type:val('type'),witnessed:chk('witnessed'),reviewed:chk('reviewed')};
+   type:val('type')};
  });
 }
 function validate(records){
@@ -187,9 +186,8 @@ function validate(records){
   for(const k of ['name','company','date','location','nature','further_nature','description','action_taken','feedback_given','manager_informed','intervention_details','type']){
    if(!String(r[k]||'').trim())return `Observation ${n}: please complete ${k.replaceAll('_',' ')}.`;
   }
-  if(!r.witnessed||!r.reviewed)return `Observation ${n}: both verification boxes must be ticked.`;
  }
- if(!$('batchConfirm').checked)return 'Please confirm the batch review.';
+ if(!$('batchConfirm').checked)return 'Please confirm that you have checked every observation in the batch.';
  return '';
 }
 async function submitBatch(){
@@ -197,7 +195,7 @@ async function submitBatch(){
  if(!confirm(`You are about to submit ${records.length} separate SORs to Winthrop Microsoft Forms. Continue?`))return;
  $('submit').disabled=true;$('progressArea').classList.remove('hidden');$('status').textContent='Sending batch to the server…';
  try{
-  const res=await fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({records})});
+  const res=await fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({records,batch_confirm:$('batchConfirm').checked})});
   const data=await res.json();if(!res.ok)throw new Error(data.error||'Could not start submission.');
   poll(data.job_id);
  }catch(e){$('status').textContent=e.message;$('submit').disabled=false;}

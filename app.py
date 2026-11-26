@@ -239,6 +239,8 @@ def index():
 def start():
     payload = request.get_json(silent=True) or {}
     records = payload.get("records")
+    if payload.get("batch_confirm") is not True:
+        return jsonify(error="Please confirm that you have checked every observation in the batch."), 400
     if not isinstance(records, list) or not 1 <= len(records) <= MAX_BATCH:
         return jsonify(error=f"Submit one test record or a batch of up to {MAX_BATCH} real observations."), 400
 
@@ -249,8 +251,6 @@ def start():
     for i, rec in enumerate(records, 1):
         if not isinstance(rec, dict):
             return jsonify(error=f"Observation {i} is invalid."), 400
-        if not rec.get("witnessed") or not rec.get("reviewed"):
-            return jsonify(error=f"Observation {i} must be confirmed as genuine and reviewed."), 400
         missing = [k for k in required if not str(rec.get(k, "")).strip()]
         if missing:
             return jsonify(error=f"Observation {i} is missing: {', '.join(missing)}."), 400
@@ -267,9 +267,7 @@ def start():
             datetime.strptime(rec["date"], "%Y-%m-%d")
         except ValueError:
             return jsonify(error=f"Observation {i} has an invalid date."), 400
-        cleaned.append({k: str(rec[k]).strip() for k in required} | {
-            "witnessed": True, "reviewed": True
-        })
+        cleaned.append({k: str(rec[k]).strip() for k in required})
 
     job_id = str(uuid.uuid4())
     with JOBS_LOCK:

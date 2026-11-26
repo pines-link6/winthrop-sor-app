@@ -22,7 +22,9 @@ This is a separate application for the Winthrop Microsoft Forms SOR destination.
   - Intervention matrix (Action Taken / Feedback Given / Manager Informed)
   - Details of intervention
   - Type of Observation
-- Requires each record to be individually marked as witnessed/verified and reviewed.
+- Defaults each observation location to External.
+- Pre-fills Details of intervention with a varied N/A entry; the user can replace it with actual intervention details.
+- Uses one batch-level confirmation checkbox after all records have been reviewed.
 - Submits records sequentially to the official Microsoft Form.
 - Counts a submission only when a Microsoft Forms confirmation message is visible.
 - Stops on an uncertain result rather than blindly retrying and potentially duplicating an SOR.
