@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#991b1b">
+<title>Winthrop – Don't Walk By SOR</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#20242b;background:#f3f4f6}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:980px;margin:auto;padding:22px}
+header{background:#991b1b;color:white;padding:24px;border-radius:14px;margin-bottom:18px}
+header h1{margin:5px 0;font-size:27px}header p{margin:6px 0 0;opacity:.9}
+.card{background:white;border:1px solid #e1e3e8;border-radius:12px;padding:18px;margin:14px 0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+label{display:block;font-weight:600;font-size:13px;margin:0 0 6px}
+input,select,textarea{width:100%;padding:11px;border:1px solid #c9cdd5;border-radius:8px;font:inherit;background:white}
+textarea{min-height:95px;resize:vertical}.wide{grid-column:1/-1}
+button{border:0;border-radius:8px;padding:11px 16px;background:#991b1b;color:white;font-weight:700;cursor:pointer}
+button.secondary{background:#374151}button.light{background:#e5e7eb;color:#111827}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+.record{border:1px solid #ddd;border-radius:10px;padding:15px;margin:12px 0}
+.record h3{margin:0 0 12px}.checks{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px}
+.check{display:flex;align-items:center;gap:7px;font-size:13px}.check input{width:auto}
+.notice{background:#fff7ed;border-left:4px solid #ea580c;padding:12px;border-radius:6px;font-size:14px}
+.small{font-size:12px;color:#626975}.hidden{display:none}
+@media(max-width:650px){.grid{grid-template-columns:1fr}.wide{grid-column:auto}.wrap{padding:12px}}
+</style>
+</head>
+<body><main class="wrap">
+<header><div><b>CSK STEEL · WINTHROP</b></div><h1>Don't Walk By – Safety Observations</h1><p>Prepare, review and export genuine site observations</p></header>
+<div class="notice"><b>Important:</b> Only record something that was actually observed. The review confirmations below are mandatory. This tool prepares and exports records; it does not automatically submit unverified or invented observations to Microsoft Forms.</div>
+
+<section class="card">
+<h2>Observation details</h2>
+<div class="grid">
+<div><label>Name</label><input id="name" value="Anonymous"></div>
+<div><label>Company</label><input id="company" value="CSK"></div>
+<div><label>Date</label><input id="date" type="date" value="{{today}}"></div>
+<div><label>Location</label><input id="location" placeholder="Enter actual work area"></div>
+<div><label>Nature of Observation</label><select id="nature"><option>Positive</option><option>Negative</option></select></div>
+<div><label>Further Nature</label><select id="further"><option>Positive</option><option>At Risk</option><option>Near Miss</option></select></div>
+<div class="wide"><label>Observation description</label><textarea id="description" placeholder="Describe what you personally observed, including the task and relevant details."></textarea></div>
+<div><label>Action Taken</label><select id="action"><option>Yes</option><option>No</option></select></div>
+<div><label>Feedback Given</label><select id="feedback"><option>Yes</option><option>No</option></select></div>
+<div><label>Manager Informed</label><select id="manager"><option>No</option><option>Yes</option></select></div>
+<div class="wide"><label>Details of intervention</label><textarea id="intervention" placeholder="Explain what action or feedback actually took place."></textarea></div>
+<div class="wide"><label>Type</label><select id="type"><option>HRA</option><option>MRA</option><option>General Category</option></select></div>
+</div>
+<div class="actions"><button id="add">Add observation to batch</button><button class="secondary" id="clear">Clear fields</button></div>
+<p class="small">Add each observation individually after checking that it reflects a real event. You can edit or remove records before export.</p>
+</section>
+
+<section class="card">
+<h2>Batch review <span id="count">(0)</span></h2>
+<div id="records"><p class="small">No observations added yet.</p></div>
+<div class="actions">
+<button id="export">Export reviewed observations (CSV)</button>
+<button class="light" id="openForm">Open Microsoft Forms</button>
+</div>
+<p class="small">The CSV is a preparation/audit file. Use the official form to submit the verified observations.</p>
+</section>
+</main>
+<script>
+const formUrl = {{ form_url|tojson }};
+let records = [];
+const $ = id => document.getElementById(id);
+function getFormRecord(){
+ return {id:crypto.randomUUID(),name:$('name').value.trim(),company:$('company').value.trim(),
+ date:$('date').value,location:$('location').value.trim(),nature:$('nature').value,
+ further_nature:$('further').value,description:$('description').value.trim(),
+ action_taken:$('action').value,feedback_given:$('feedback').value,
+ manager_informed:$('manager').value,intervention_details:$('intervention').value.trim(),
+ type:$('type').value,witnessed:false,reviewed:false};
+}
+function clearFields(){
+ $('location').value='';$('description').value='';$('intervention').value='';
+ $('nature').value='Positive';$('further').value='Positive';
+ $('action').value='Yes';$('feedback').value='Yes';$('manager').value='No';
+}
+function render(){
+ $('count').textContent=`(${records.length})`;
+ const host=$('records');host.innerHTML='';
+ if(!records.length){host.innerHTML='<p class="small">No observations added yet.</p>';return;}
+ records.forEach((r,i)=>{
+  const div=document.createElement('div');div.className='record';
+  div.innerHTML=`<h3>Observation ${i+1} · ${escapeHtml(r.location||'Location missing')}</h3>
+  <div class="small">${escapeHtml(r.nature)} / ${escapeHtml(r.further_nature)} / ${escapeHtml(r.type)}</div>
+  <p>${escapeHtml(r.description)}</p><p class="small">Intervention: ${escapeHtml(r.intervention_details)}</p>
+  <div class="checks">
+  <label class="check"><input type="checkbox" data-i="${i}" data-k="witnessed" ${r.witnessed?'checked':''}> I personally witnessed this event / have verified it occurred</label>
+  <label class="check"><input type="checkbox" data-i="${i}" data-k="reviewed" ${r.reviewed?'checked':''}> I reviewed the details for accuracy</label>
+  </div><div class="actions"><button class="light" data-remove="${i}">Remove</button></div>`;
+  host.appendChild(div);
+ });
+ host.querySelectorAll('[data-i]').forEach(el=>el.addEventListener('change',e=>{
+  records[+e.target.dataset.i][e.target.dataset.k]=e.target.checked;
+ }));
+ host.querySelectorAll('[data-remove]').forEach(el=>el.addEventListener('click',e=>{
+  records.splice(+e.target.dataset.remove,1);render();
+ }));
+}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+$('add').onclick=()=>{
+ const r=getFormRecord();
+ const required=['date','location','description','intervention_details'];
+ const missing=required.filter(k=>!r[k]);
+ if(missing.length){alert('Please complete: '+missing.join(', '));return;}
+ records.push(r);clearFields();render();
+};
+$('clear').onclick=clearFields;
+$('export').onclick=async()=>{
+ if(!records.length){alert('Add at least one observation first.');return;}
+ try{
+  const res=await fetch('/api/export',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({records})});
+  if(!res.ok){const data=await res.json();throw new Error(data.error||'Export failed');}
+  const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='winthrop_sor_records.csv';a.click();URL.revokeObjectURL(url);
+ }catch(e){alert(e.message);}
+};
+$('openForm').onclick=()=>{if(formUrl)window.open(formUrl,'_blank');else alert('Set WINTHROP_FORM_URL in Render environment variables.');};
+render();
+</script></body></html>
